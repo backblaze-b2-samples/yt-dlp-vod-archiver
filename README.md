@@ -15,9 +15,17 @@ Everything runs on local open-source tooling — **no second API key, B2 credent
 
 ## What it looks like
 
-- **Dashboard** — archives, VODs archived, clips cut, total archived size, plus archive activity and recent archived videos.
-- **Archives** — the list/detail flow: register a source, run it, and browse each archived video's metadata and clips.
-- **Files** — the full B2 bucket explorer with preview, download, and delete.
+**Dashboard** — archive counts, VODs archived, clips cut, and total size on B2, with a 7-day archive-activity chart and the most recently archived videos.
+
+![Dashboard with archive metrics, a 7-day activity chart, and recent archived videos](docs/images/dashboard.png)
+
+**Archives** — the source library: each registered VOD or live-stream URL with its run status, ready to run, view, edit, or delete.
+
+![Archives list of registered sources with completed run status](docs/images/archives.png)
+
+**Archive detail** — one archived video with its metadata and B2 keys, plus the ffmpeg-cut highlight clips playing inline.
+
+![Archive detail view with archived video metadata and inline highlight clips](docs/images/archive-detail.png)
 
 ## Quick Start
 
