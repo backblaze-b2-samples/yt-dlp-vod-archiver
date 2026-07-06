@@ -57,3 +57,70 @@ export interface UploadStats {
   uploads_today: number;
   total_downloads: number;
 }
+
+// --- VOD archive pipeline ---
+
+export type ClipMode = "chapters" | "interval" | "none";
+export type RunStatus = "idle" | "running" | "completed" | "failed";
+
+export interface Clip {
+  key: string;
+  start: number;
+  end: number;
+  label: string;
+}
+
+export interface ArchivedVideo {
+  video_id: string;
+  title: string;
+  duration_seconds: number;
+  vod_key: string;
+  meta_key: string;
+  size_bytes: number;
+  thumbnail_url: string | null;
+  archived_at: string;
+  clips: Clip[];
+}
+
+/** Create/edit payload for an archive. */
+export interface ArchiveConfig {
+  url: string;
+  title?: string;
+  clip_mode: ClipMode;
+  clip_length_seconds: number;
+  max_clips: number;
+}
+
+export interface Archive {
+  id: string;
+  title: string;
+  url: string;
+  clip_mode: ClipMode;
+  clip_length_seconds: number;
+  max_clips: number;
+  status: RunStatus;
+  progress: number;
+  current_step: string;
+  last_error: string | null;
+  created_at: string;
+  last_run_at: string | null;
+  videos: ArchivedVideo[];
+}
+
+export interface ArchiveManifest {
+  archives: Archive[];
+  updated_at: string | null;
+}
+
+export interface ArchiveStats {
+  total_archives: number;
+  total_videos: number;
+  total_clips: number;
+  total_size_bytes: number;
+  total_size_human: string;
+}
+
+export interface DailyArchiveCount {
+  date: string;
+  videos: number;
+}

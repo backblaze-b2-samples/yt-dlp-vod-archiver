@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { humanizeBytes } from "@/lib/utils";
-import type { FileStatus } from "@vibe-coding-starter-kit/shared";
+import type { FileStatus } from "@yt-dlp-vod-archiver/shared";
 
 export interface UploadItem {
   id: string;

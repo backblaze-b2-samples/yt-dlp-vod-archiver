@@ -1,7 +1,18 @@
-<!-- last_verified: 2026-06-25 -->
+<!-- last_verified: 2026-07-06 -->
 # Dev Workflows
 
 Engineering workflows for this repo.
+
+## Backend Dependencies
+
+The archive pipeline adds two backend deps (in `services/api/requirements.txt`):
+
+- **`yt-dlp`** — VOD download. Date-versioned; keep it reasonably fresh for extractor fixes.
+- **`imageio-ffmpeg`** — bundles a static ffmpeg binary (`imageio_ffmpeg.get_ffmpeg_exe()`),
+  so **no system ffmpeg is required**. Both yt-dlp muxing and clip cutting use this binary.
+
+Everything is CPU-only local I/O + stream-copy — no ML, no GPU. Archive tests are hermetic:
+they mock `repo/ytdlp_client`, `repo/ffmpeg_client`, and B2, so `pnpm test:api` needs no network.
 
 ## New Feature
 
@@ -60,7 +71,7 @@ Engineering workflows for this repo.
 - Frontend lint: `pnpm lint`
 - Backend lint: `pnpm lint:api`
 - Full suite: `pnpm typecheck && pnpm lint && pnpm lint:api && pnpm test:api && pnpm check:structure`
-- E2E: `pnpm test:e2e` (run `pnpm --filter @vibe-coding-starter-kit/web exec playwright install chromium` once first)
+- E2E: `pnpm test:e2e` (run `pnpm --filter @yt-dlp-vod-archiver/web exec playwright install chromium` once first)
 
 ### When to run
 - After behavior change: run relevant subset

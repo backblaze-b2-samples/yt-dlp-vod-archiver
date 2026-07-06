@@ -1,104 +1,35 @@
-<!-- last_verified: 2026-05-01 -->
-# Vibe Coding Starter Kit
+<!-- last_verified: 2026-07-06 -->
+# yt-dlp VOD Archiver
 
-Stop wiring boilerplate and start building. This open-source starter kit gives vibe coders and AI coding agents a production-ready foundation — a full-stack TypeScript + Python template with a pre-built dashboard UI, file upload system, and **[Backblaze B2](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-oss-start)** cloud storage already integrated. Save thousands of tokens on setup prompts, skip the "build me a dashboard from scratch" loop, and go straight to building your app's unique features.
+A self-hosted, automated archive pipeline for **live streams and VODs** — built for content creators, media researchers, and fan communities who need a permanent copy before the upstream platform deletes it (often 60–90 days after broadcast). Register a source URL, run it, and the pipeline downloads the full VOD with **yt-dlp**, streams it straight into **[Backblaze B2](https://www.backblaze.com/cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-yt-dlp-vod-archiver)**, captures the video's metadata, cuts highlight clips with **ffmpeg**, and keeps a running manifest a lightweight in-app browser reads back.
+
+Everything runs on local open-source tooling — **no second API key, B2 credentials only**. B2 is the storage layer for full VODs, highlight clips, per-video metadata JSON, and the channel index manifest, all via the S3-compatible API with a custom user agent and standardized `B2_*` env vars.
 
 **What you get out of the box:**
-- Full-stack dashboard UI (Next.js 16 + React 19 + Tailwind v4 + shadcn/ui)
-- File upload with drag-and-drop, progress tracking, and metadata extraction
-- File browser with preview, download, and delete
-- FastAPI backend with strict layered architecture and structural tests
-- Agent-optimized docs — your AI coding agent can read the repo and start contributing immediately
+- **Archives** — register / edit / delete / run a source URL (single VOD, playlist, or channel), with live run status.
+- **VOD ingest to B2** — yt-dlp download streamed to B2 via boto3 managed multipart (multi-GB VODs never buffer in memory).
+- **Highlight clips** — ffmpeg cuts clips by chapter markers or fixed interval, stream-copy (no re-encode).
+- **Archive library** — a running `archive/index.json` manifest and a scoped `/archives` browser with inline clip playback.
+- **Bucket explorer & upload** — the full-bucket `/files` browser and `/upload` page carried over from the starter kit.
+- FastAPI backend with strict layered architecture and structural tests; agent-optimized docs.
 
 ## What it looks like
 
-**Dashboard** — stats, upload activity, and recent uploads at a glance:
-
-![Dashboard view showing stat cards, upload activity chart, and recent uploads table](docs/images/b2-starterkit-dashboard1.png)
-
-**File browser** — tree view with preview, download, and delete:
-
-![File browser view showing a tree of files with hover actions](docs/images/b2-starterkit-fileview2.png)
-
-## Agent-First Architecture
-
-This repo is optimized for coding agents. Use the template, point your agent at it, and start building.
-
-The structure follows the principle that **repository knowledge is the system of record**. Anything an agent can't access in-context doesn't exist — so everything it needs to reason about the codebase is versioned, co-located, and discoverable from the repo itself.
-
-### How it works
-
-**[AGENTS.md](AGENTS.md) is the single source of truth for all coding agents.** A ~100 line entry point gives agents the repository layout, architectural invariants, commands, conventions, and pointers to deeper docs. Agent-specific files (CLAUDE.md, etc.) are thin pointers back to AGENTS.md.
-
-**Architecture is enforced mechanically, not by convention.** Layering rules, import boundaries, file size limits, and SDK containment are verified by structural tests and lints that run on every change. When rules are enforceable by code, agents follow them reliably.
-
-**The knowledge base is structured for progressive disclosure:**
-
-```
-AGENTS.md              Single source of truth — layout, invariants, commands, conventions
-ARCHITECTURE.md        System layout, layering rules, data flows
-docs/
-  features/            Feature docs (inputs, outputs, flows, edge cases)
-  app-workflows.md     User journeys
-  dev-workflows.md     Engineering workflows and testing
-  SECURITY.md          Security principles
-  RELIABILITY.md       Reliability expectations
-  exec-plans/          Execution plans and tech debt tracker
-```
-
-### Key design decisions
-
-| Principle | Implementation |
-|-----------|---------------|
-| Give agents a single source of truth | AGENTS.md ~100 lines — layout, invariants, commands, conventions |
-| Enforce invariants mechanically | Structural tests + ruff + ESLint verify boundaries |
-| DRY documentation | Each fact lives in one place; no redundant files to drift |
-| Strict layered architecture | `types -> config -> repo -> service -> runtime`, enforced by tests |
-| Prefer boring, composable libraries | stdlib logging over frameworks, Pydantic over ad-hoc validation |
-| Contain external SDKs | `boto3` only in `repo/` layer — verified by structural test |
-| Keep files agent-sized | 300-line limit per file, enforced by test |
-| Docs updated with code | Same-PR requirement prevents documentation rot |
-| Structured observability | JSON logging, `/metrics` endpoint, request tracing |
-
-This approach draws from [OpenAI's experience building with Codex](https://openai.com/index/harness-engineering/): agents work best in environments with strict boundaries, predictable structure, and progressive context disclosure.
+- **Dashboard** — archives, VODs archived, clips cut, total archived size, plus archive activity and recent archived videos.
+- **Archives** — the list/detail flow: register a source, run it, and browse each archived video's metadata and clips.
+- **Files** — the full B2 bucket explorer with preview, download, and delete.
 
 ## Quick Start
 
-You need: Node.js >= 20, pnpm >= 9, Python >= 3.11, and a free **[Backblaze B2 account](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-oss-start)**.
+You need: Node.js >= 20, pnpm >= 9, Python >= 3.11, and a free **[Backblaze B2 account](https://www.backblaze.com/cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-yt-dlp-vod-archiver)**. No system ffmpeg is required — a static binary is bundled via `imageio-ffmpeg`.
 
-### Start a new project
-
-**Option 1: GitHub Template (recommended)**
-
-Click the green **"Use this template"** button at the top of this repo, name your project, then:
-
-```bash
-git clone https://github.com/yourorg/my-cool-app.git
-cd my-cool-app
-```
-
-**Option 2: Clone and reinitialize**
-
-```bash
-git clone https://github.com/backblaze-b2-samples/vibe-coding-starter-kit.git my-cool-app
-cd my-cool-app
-rm -rf .git
-git init
-git add .
-git commit -m "Initial commit from vibe-coding-starter-kit"
-```
-
-Either way you get a clean project with no upstream history — ready to push to your own repo and point your agent at it.
-
-### Setup
-
-**1. Install dependencies**
+### 1. Install dependencies
 
 ```bash
 pnpm install
 ```
 
-**2. Set up the backend**
+### 2. Set up the backend
 
 ```bash
 cd services/api
@@ -107,66 +38,82 @@ pip install -r requirements.txt
 cd ../..
 ```
 
-**3. Add your B2 credentials**
+This installs `yt-dlp` and `imageio-ffmpeg` (the bundled ffmpeg) alongside the API deps.
 
-Set up your local `.env`:
+### 3. Add your B2 credentials
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` in your editor and keep it visible. Then head to the [Backblaze B2 dashboard](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-oss-start) and:
+Open `.env` and fill in (all S3-compatible, no b2-native):
 
-1. **Create a bucket.** B2 will show two values — paste each into `.env`:
-   - **Bucket Unique Name** → `B2_BUCKET_NAME`
-   - **Endpoint** → `B2_ENDPOINT`
-2. **Create an application key** with `Read and Write` permission. B2 will show two values — paste each into `.env`:
-   - **keyID** → `B2_KEY_ID`
-   - **applicationKey** → `B2_APPLICATION_KEY` *(only shown once — paste it now)*
+| Variable | Where it comes from |
+|----------|---------------------|
+| `B2_APPLICATION_KEY_ID` | keyID of a B2 application key with Read & Write |
+| `B2_APPLICATION_KEY` | applicationKey (shown once — paste it now) |
+| `B2_BUCKET_NAME` | your bucket's unique name |
+| `B2_REGION` | e.g. `us-west-004` — the S3 endpoint is derived as `https://s3.<region>.backblazeb2.com` |
+| `B2_PUBLIC_URL_BASE` | optional; leave blank to use short-lived presigned URLs |
 
-> Want a walkthrough? See the docs for [creating a bucket](https://www.backblaze.com/docs/cloud-storage-create-and-manage-buckets) and [creating app keys](https://www.backblaze.com/docs/cloud-storage-create-and-manage-app-keys).
+> Walkthroughs: [creating a bucket](https://www.backblaze.com/docs/cloud-storage-create-and-manage-buckets?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-yt-dlp-vod-archiver) and [creating app keys](https://secure.backblaze.com/app_keys.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-yt-dlp-vod-archiver).
 
-**4. Run it**
+### 4. Run it
 
 ```bash
 pnpm dev
 ```
 
-That's it. Frontend at `localhost:3000`, API at `localhost:8000`. Upload a file and see it working.
+Frontend at `localhost:3000`, API at `localhost:8000`. `pnpm dev` runs `pnpm doctor` first — a preflight that catches common setup gotchas (wrong Node/Python version, missing venv, missing or placeholder `.env`, busy ports).
 
-`pnpm dev` runs `pnpm doctor` first — a preflight check that catches the common setup gotchas (wrong Node/Python version, missing venv, missing or placeholder `.env`, ports already taken) and tells you exactly how to fix each one. Run it standalone any time with `pnpm doctor`.
+### 5. Archive your first VOD
 
-## Building Your App
+Open **Archives → New archive**. For a quick, reliable demo the create form suggests a small stable source:
 
-When you adapt this kit for a new app, keep the shared scaffolding and only swap out what's app-specific:
+```
+https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4
+```
 
-- **Keep** the UI kit (`apps/web/src/components/ui/` + design tokens in `globals.css` + `/design`).
-- **Keep** the File Explorer (`/files`) and Upload (`/upload`) pages and their sidebar nav entries — they're the reusable B2-backed surface.
-- **Adapt** the Dashboard (`/`) to your use case — replace the default stats, chart, and recent uploads with metrics that reflect what your app actually does.
-- **Rebrand** by editing a single file: `apps/web/src/lib/app-config.ts` holds the app name and description (`APP_NAME`, `APP_DESCRIPTION`). Changing them there updates the page title, sidebar, and breadcrumb everywhere — no other files to touch.
+Leave the defaults (interval clips, 5s, up to 3), click **Create**, then **Run**. The page polls while the pipeline downloads, uploads to B2, and cuts clips — then browse the archived video, its metadata, and playable clips.
 
-Full contract and rationale: [AGENTS.md §2 — Building on This Starter Kit](AGENTS.md#2-building-on-this-starter-kit).
+## How it works
+
+```
+Register source URL  ──▶  POST /archives         (manifest entry: status=idle)
+        │
+        └─ Run  ──▶  POST /archives/{id}/run      (202; background thread)
+                        │
+   probe (yt-dlp) ─▶ download VOD ─▶ upload_file to B2 (managed multipart)
+        │                                   │
+        └─ write meta JSON to B2            └─ cut clips (ffmpeg -c copy) ─▶ upload to B2
+                        │
+                        └─ update archive/index.json  (status=completed, progress=100)
+```
+
+The UI polls `GET /archives/{id}` while `status === "running"`, so progress and the current step update live.
+
+## Building on This Kit
+
+The reusable B2 scaffolding stays: the UI kit (`apps/web/src/components/ui/` + tokens in `globals.css` + `/design`), the File Explorer (`/files`), and Upload (`/upload`). The Dashboard is repurposed here for archive metrics. See [AGENTS.md §2](AGENTS.md#2-building-on-this-starter-kit).
 
 ## Core Features
 
+- [Archive Jobs](docs/features/archive-jobs.md) — register / edit / delete / run a source; lifecycle + status
+- [VOD Ingest to B2](docs/features/vod-ingest.md) — yt-dlp download streamed to B2 via managed multipart
+- [Highlight Clips](docs/features/highlight-clips.md) — ffmpeg clips by chapters or interval
+- [Archive Library](docs/features/archive-library.md) — the running manifest + scoped `/archives` browser
 - [File Upload](docs/features/file-upload.md) — drag-and-drop upload with real-time progress
 - [File Browser](docs/features/file-browser.md) — list, preview, download, delete files
-- [Dashboard](docs/features/dashboard.md) — stats cards, upload chart, recent uploads
-- [Metadata Extraction](docs/features/metadata-extraction.md) — image dimensions, EXIF, PDF info, checksums
-- [Design System](docs/design-system.md) — tokens, primitives, AI elements, the blaze generating loader, and inline `ErrorState` / `EmptyState` patterns. Live preview at `/design`.
-- Inline error handling — fetch failures surface *what's wrong* (API offline, 401, 5xx) and offer a Retry, instead of silently rendering empty state.
-- Single-source config — one `.env` at the repo root powers both API and web app, validated at startup so misconfig fails fast with a readable message.
-- Centralized data layer — every fetch goes through TanStack Query hooks in `apps/web/src/lib/queries.ts`; cache invalidation is one call after a mutation.
-- Structural tests — verify layering rules, import boundaries, SDK containment, file size limits
-- Structured JSON logging — every request traced with `request_id` and timing
-- `/health` endpoint — B2 connectivity check
-- `/metrics` endpoint — Prometheus-format counters (request count, latency, uploads)
+- [Dashboard](docs/features/dashboard.md) — archive metrics, activity chart, recent videos
+- [Metadata Extraction](docs/features/metadata-extraction.md) — image/PDF metadata for uploads
+- [Design System](docs/design-system.md) — tokens, primitives, error/empty states. Live preview at `/design`.
 
 ## Tech Stack
 
 - TypeScript, Next.js 16, React 19, Tailwind v4, shadcn/ui, Recharts
-- TanStack Query — caching, dedup, retry, stale-while-revalidate for every fetch
-- Python 3.11+, FastAPI, boto3, Pydantic v2, Pillow, PyPDF2
+- TanStack Query — caching, dedup, retry for every fetch (polling while a run is in progress)
+- Python 3.11+, FastAPI, boto3, Pydantic v2
+- **yt-dlp** (VOD download) + **ffmpeg** (clip cutting, bundled via `imageio-ffmpeg`) — local, CPU-only, no API key
 - Backblaze B2 (S3-compatible object storage)
 - pnpm workspaces (monorepo)
 
@@ -182,7 +129,7 @@ Full contract and rationale: [AGENTS.md §2 — Building on This Starter Kit](AG
 | `pnpm lint:api` | Lint backend (ruff) |
 | `pnpm test:api` | Run backend tests |
 | `pnpm check:structure` | Verify layering rules |
-| `pnpm test:e2e` | Playwright e2e tests (run `pnpm --filter @vibe-coding-starter-kit/web exec playwright install chromium` once first) |
+| `pnpm test:e2e` | Playwright e2e tests (run `pnpm --filter @yt-dlp-vod-archiver/web exec playwright install chromium` once first) |
 
 ## Documentation Map
 
@@ -190,17 +137,12 @@ Full contract and rationale: [AGENTS.md §2 — Building on This Starter Kit](AG
 |-----|---------|
 | [AGENTS.md](AGENTS.md) | Agent table of contents — start here |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System layout, layering, data flows |
-| [docs/features/](docs/features/) | Feature docs (upload, browser, dashboard, metadata) |
-| [docs/design-system.md](docs/design-system.md) | Design tokens, primitives, AI elements, loader, error/empty states |
+| [docs/features/](docs/features/) | Feature docs |
 | [docs/app-workflows.md](docs/app-workflows.md) | User journeys |
 | [docs/dev-workflows.md](docs/dev-workflows.md) | Engineering workflows and testing |
-| [docs/SECURITY.md](docs/SECURITY.md) | Security principles |
-| [docs/RELIABILITY.md](docs/RELIABILITY.md) | Reliability expectations |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security principles (URL/SSRF, prefix-scoped delete) |
+| [docs/RELIABILITY.md](docs/RELIABILITY.md) | Reliability expectations (background runs) |
 | [docs/exec-plans/](docs/exec-plans/) | Execution plans and tech debt tracker |
-
-## Contributing
-
-Start with [AGENTS.md](AGENTS.md). It's the map — everything else is discoverable from there.
 
 ## License
 

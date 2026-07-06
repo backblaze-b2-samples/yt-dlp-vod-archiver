@@ -2,11 +2,14 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    b2_endpoint: str = "https://s3.us-west-004.backblazeb2.com"
-    b2_key_id: str = ""
+    # Standardized B2_* names. The S3 endpoint is DERIVED from the region so
+    # there is no hardcoded region string anywhere in source — set B2_REGION
+    # (e.g. "us-west-004") and the endpoint resolves automatically.
+    b2_region: str = ""
+    b2_application_key_id: str = ""
     b2_application_key: str = ""
     b2_bucket_name: str = ""
-    b2_public_url: str = ""
+    b2_public_url_base: str = ""
 
     api_port: int = 8000
     # Explicit allowlist by default — covers Next on :3000 and the
@@ -31,6 +34,15 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.api_cors_origins.split(",")]
+
+    @property
+    def b2_endpoint(self) -> str:
+        """S3-compatible endpoint derived from the configured region.
+
+        Keeps the region out of the boto3 call sites and out of any hardcoded
+        string — the single source of truth is B2_REGION.
+        """
+        return f"https://s3.{self.b2_region}.backblazeb2.com"
 
 
 settings = Settings()

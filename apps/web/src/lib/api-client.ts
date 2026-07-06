@@ -1,9 +1,13 @@
 import type {
+  Archive,
+  ArchiveConfig,
+  ArchiveStats,
+  DailyArchiveCount,
   DailyUploadCount,
   FileMetadata,
   FileUploadResponse,
   UploadStats,
-} from "@vibe-coding-starter-kit/shared";
+} from "@yt-dlp-vod-archiver/shared";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -208,4 +212,58 @@ export function uploadFile(
     xhr.open("POST", `${API_BASE}/upload`);
     xhr.send(formData);
   });
+}
+
+// --- Archives ---
+
+export async function getArchives() {
+  return apiFetch<Archive[]>("/archives");
+}
+
+export async function getArchive(id: string) {
+  return apiFetch<Archive>(`/archives/${encodeURIComponent(id)}`);
+}
+
+export async function createArchive(config: ArchiveConfig) {
+  return apiFetch<Archive>("/archives", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+}
+
+export async function updateArchive(id: string, config: ArchiveConfig) {
+  return apiFetch<Archive>(`/archives/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+}
+
+export async function deleteArchive(id: string) {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/archives/${encodeURIComponent(id)}`,
+    { method: "DELETE" }
+  );
+}
+
+export async function runArchive(id: string) {
+  return apiFetch<{ id: string; status: string }>(
+    `/archives/${encodeURIComponent(id)}/run`,
+    { method: "POST" }
+  );
+}
+
+export async function getArchiveStats() {
+  return apiFetch<ArchiveStats>("/archives/stats");
+}
+
+export async function getArchiveActivity(days = 7) {
+  return apiFetch<DailyArchiveCount[]>(`/archives/stats/activity?days=${days}`);
+}
+
+/** Presigned URL for an archived asset. `download` forces an attachment. */
+export async function getArchiveAsset(key: string, download = false) {
+  const params = new URLSearchParams({ key, download: String(download) });
+  return apiFetch<{ url: string }>(`/archives/asset?${params.toString()}`);
 }

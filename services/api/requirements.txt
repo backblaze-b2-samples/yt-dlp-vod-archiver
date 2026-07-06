@@ -9,6 +9,12 @@ python-magic>=0.4.27
 Pillow>=11.0.0
 PyPDF2>=3.0.0
 
+# VOD archive pipeline (local OSS, no API key, CPU-only)
+# yt-dlp is date-versioned — keep it reasonably fresh for extractor fixes.
+yt-dlp>=2026.7.4,<2027
+# Bundles a static ffmpeg binary so clip cutting needs no system ffmpeg.
+imageio-ffmpeg>=0.5.1
+
 # Dev / quality
 ruff>=0.8.0
 pytest>=8.0.0

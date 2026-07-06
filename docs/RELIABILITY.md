@@ -1,7 +1,26 @@
-<!-- last_verified: 2026-06-25 -->
+<!-- last_verified: 2026-07-06 -->
 # Reliability
 
 Reliability expectations and practices for this project.
+
+## Background Archive Runs
+
+- `POST /archives/{id}/run` returns `202` immediately and does the work on a daemon
+  thread — the HTTP request never blocks on a multi-GB download.
+- Run state is persisted to the manifest at each stage (`status`, `progress`,
+  `current_step`), so a page reload always reflects live progress. The UI polls
+  `GET /archives/{id}` while `status === "running"`.
+- **Failures never crash the server.** `service/pipeline.py` wraps the whole run in a
+  try/except that sets `status=failed` and records `last_error` on the manifest entry;
+  the UI surfaces it inline.
+- **Double-run guard.** A module-level set of running ids plus a lock means a second
+  `run` for an in-progress archive returns `409` instead of starting a duplicate.
+- **Manifest integrity.** All read-modify-write of `archive/index.json` is serialized
+  by a lock in `repo/manifest.py`, so concurrent requests and the run thread can't
+  clobber each other in-process.
+- **Bounded work.** A run processes at most `MAX_VIDEOS_PER_RUN` videos from a
+  playlist/channel source so a single run stays bounded.
+- Temporary downloads use a `TemporaryDirectory` that is always cleaned up, even on error.
 
 ## Health Checks
 

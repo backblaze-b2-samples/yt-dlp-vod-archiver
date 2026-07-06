@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
+  Film,
   Upload,
   FolderOpen,
   Settings,
@@ -25,7 +26,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { getFiles } from "@/lib/api-client";
-import type { FileMetadata } from "@vibe-coding-starter-kit/shared";
+import type { FileMetadata } from "@yt-dlp-vod-archiver/shared";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -34,6 +35,7 @@ interface CommandPaletteProps {
 
 const routes = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Archives", href: "/archives", icon: Film },
   { label: "Upload", href: "/upload", icon: Upload },
   { label: "Files", href: "/files", icon: FolderOpen },
   { label: "Settings", href: "/settings", icon: Settings },

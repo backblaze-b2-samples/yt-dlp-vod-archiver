@@ -7,40 +7,48 @@ This is the authoritative control surface for all coding agents. Read this first
 
 ```
 apps/web/          Next.js 16 frontend (App Router, Tailwind v4, shadcn/ui)
+  src/app/archives/       Archives list + detail routes (primary feature)
+  src/components/archives/ Archive UI (form dialog, list, detail, clip player)
 services/api/      FastAPI backend (layered: types/config/repo/service/runtime)
+  app/repo/               b2_client, ytdlp_client, ffmpeg_client, manifest
+  app/service/            archives, pipeline, clipping (+ starter files/upload)
 packages/shared/   Shared TypeScript types
 docs/              System of record (features, workflows, security, reliability)
 docs/exec-plans/   Execution plans and tech debt tracker
 infra/railway/     Deployment config
 ```
 
-## 2. Building on This Starter Kit
+## 2. What This App Is (and its reusable scaffolding)
 
-When this repo is used as the foundation for a new app, the following pieces are part of the starter contract — keep them. Adapt only what the new use case actually requires.
+This app is the **yt-dlp VOD Archiver**: register a source URL, run it, and the
+background pipeline downloads the VOD (yt-dlp), streams it to B2, captures
+metadata, and cuts highlight clips (ffmpeg). The primary entity is an **Archive**
+(see [docs/features/archive-jobs.md](docs/features/archive-jobs.md)). It was built
+on the vibe-coding-starter-kit; the starter scaffolding below is kept and reused.
 
 **Keep as-is (do not strip, rename, or replace)**
 - **UI kit / design system.** `apps/web/src/components/ui/` (shadcn primitives), the design tokens in `apps/web/src/app/globals.css`, and the `/design` reference page. Build new screens with these primitives; never edit the generated `components/ui/` files directly. Restyling happens through tokens in `globals.css`.
-- **File Explorer.** `/files` route, `apps/web/src/app/files/`, and `apps/web/src/components/files/`. The Files sidebar entry in `apps/web/src/components/layout/app-sidebar.tsx` stays.
+- **File Explorer.** `/files` route, `apps/web/src/app/files/`, and `apps/web/src/components/files/`. The Files sidebar entry stays. The archive detail page is a *scoped* explorer (`archive/<id>/`) and is additive — it never replaces `/files`.
 - **Upload.** `/upload` route, `apps/web/src/app/upload/`, and `apps/web/src/components/upload/`. The Upload sidebar entry stays.
-- The sidebar nav itself (Dashboard, Upload, Files, Settings, plus the Design System utility link).
+- The sidebar nav (Dashboard, Archives, Upload, Files, Settings, plus the Design System utility link).
 
-**Adapt to the new use case**
-- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` (stats cards, upload chart, recent uploads table) are illustrative defaults. Replace them with metrics, charts, and tables that reflect what the new app actually does (e.g. transcripts processed, embeddings indexed, classifications run). New aggregations must flow through the same `runtime -> service -> repo` layering and be exposed via TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`.
-- Update `docs/features/dashboard.md` in the same PR as any dashboard change (see §9).
+**App-specific surfaces (this app's core)**
+- **Archives.** `/archives` (list) and `/archives/[id]` (detail), `apps/web/src/components/archives/`, and the archive backend (`app/types/archives.py`, `app/repo/{ytdlp_client,ffmpeg_client,manifest}.py`, `app/service/{archives,pipeline,clipping}.py`, `app/runtime/archives.py`). This is the primary feature.
+- **Dashboard.** `/` route and `apps/web/src/components/dashboard/` are repurposed for archive metrics (archives, VODs, clips, total size; activity chart; recent videos). Aggregations flow through the same `runtime -> service -> repo` layering and TanStack Query hooks in `apps/web/src/lib/queries.ts` — no bare `useEffect + fetch`. Update `docs/features/dashboard.md` in the same PR as any dashboard change (see §9).
 
-**Why this contract exists**
-- The UI kit, Files, and Upload pages are the reusable B2-backed scaffolding that makes this a starter kit — stripping them defeats the purpose. The dashboard is the only screen explicitly designed to be rewritten per app.
+**Why the scaffolding contract exists**
+- The UI kit, Files, and Upload pages are reusable B2-backed surfaces — keep them so the app stays a coherent B2 sample. All external tools (`boto3`, `yt_dlp`, ffmpeg) stay contained in `app/repo/` (§3).
 
 ## 3. Architectural Invariants
 
 **Backend layering**: `types` -> `config` -> `repo` -> `service` -> `runtime`
 
 - No backward imports across layers
-- No `boto3` outside `repo/`
+- No `boto3`, `yt_dlp`, or ffmpeg outside `repo/` — all external tools wrapped in `repo/` adapters
 - No business logic in route handlers (`runtime/`)
-- All external APIs wrapped in `repo/` adapters
 - All request/response data validated at boundary (Pydantic models)
-- No shared mutable state across layers
+- The background run pipeline (`service/pipeline.py`) confines its mutable state to a
+  module-level running-ids set + lock; manifest writes are serialized by a lock in `repo/manifest.py`
 
 **Frontend**: shadcn/ui components in `src/components/ui/` are generated — never modify them.
 
@@ -124,6 +132,8 @@ If documentation and implementation conflict, update docs in the same PR. Docume
 | Topic | Location |
 |-------|----------|
 | System layout, data flows, boundaries | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Primary feature (Archive lifecycle) | [docs/features/archive-jobs.md](docs/features/archive-jobs.md) |
+| VOD ingest / clips / library | [docs/features/vod-ingest.md](docs/features/vod-ingest.md), [highlight-clips.md](docs/features/highlight-clips.md), [archive-library.md](docs/features/archive-library.md) |
 | Feature docs | [docs/features/](docs/features/) |
 | User journeys | [docs/app-workflows.md](docs/app-workflows.md) |
 | Engineering workflows and testing | [docs/dev-workflows.md](docs/dev-workflows.md) |
