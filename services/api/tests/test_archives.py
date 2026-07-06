@@ -173,6 +173,8 @@ async def test_run_pipeline_hermetic(mem_manifest, monkeypatch):
     assert len(result.videos) == 1
     assert result.videos[0].vod_key == f"archive/vods/{archive.id}/demo.mp4"
     assert len(result.videos[0].clips) == 3
+    # Interval was requested and used, so no fallback is recorded.
+    assert result.videos[0].clip_strategy == "interval"
 
 
 async def test_double_run_guarded(mem_manifest, monkeypatch):
@@ -183,6 +185,48 @@ async def test_double_run_guarded(mem_manifest, monkeypatch):
     monkeypatch.setattr(pipeline, "_running", {archive.id})
     # Already running -> start_run refuses, run endpoint would 409.
     assert pipeline.start_run(archive.id) is False
+
+
+# ----- Clip planning: strategy + progress feedback -----
+
+
+def test_clip_plan_records_strategy():
+    from app.service.clipping import build_clip_plan
+
+    # Interval mode: used as requested.
+    plan, strategy = build_clip_plan(10.0, "interval", 5, 3, [])
+    assert strategy == "interval"
+    assert len(plan) == 3
+
+    # Chapters requested on a source with no markers: falls back but says so,
+    # rather than looking identical to interval mode.
+    plan, strategy = build_clip_plan(10.0, "chapters", 5, 3, [])
+    assert strategy == "chapters_fallback_interval"
+    assert len(plan) == 3
+
+    # Chapters with usable markers: used, labelled by chapter title.
+    chapters = [{"start_time": 0.0, "end_time": 4.0, "title": "Intro"}]
+    plan, strategy = build_clip_plan(10.0, "chapters", 5, 3, chapters)
+    assert strategy == "chapters"
+    assert plan[0][2] == "Intro"
+
+    # None: no clips.
+    plan, strategy = build_clip_plan(10.0, "none", 5, 3, [])
+    assert strategy == "none"
+    assert plan == []
+
+
+def test_work_progress_advances_across_stages():
+    from app.service.pipeline import _work_progress
+
+    # Within one video the bar advances download -> upload -> clipping and stays
+    # inside the 10-90 work band (no longer frozen at a fixed 10%).
+    download = _work_progress(0, 1, 0.0)
+    upload = _work_progress(0, 1, 0.5)
+    clipping = _work_progress(0, 1, 0.75)
+    assert 10 <= download < upload < clipping < 90
+    # A later video never regresses below an earlier one's final stage.
+    assert _work_progress(1, 2, 0.0) >= _work_progress(0, 2, 0.75)
 
 
 # ----- No-network import / signature guard -----

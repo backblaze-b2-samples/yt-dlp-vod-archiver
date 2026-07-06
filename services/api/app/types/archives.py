@@ -15,6 +15,13 @@ from pydantic import BaseModel, Field
 # selector share one closed set of values.
 ClipMode = Literal["chapters", "interval", "none"]
 
+# What the clip planner *actually* did, recorded per archived video so a
+# "chapters" run that silently fell back to intervals (no chapter markers on the
+# source) is legible in the UI instead of looking identical to interval mode.
+ClipStrategy = Literal[
+    "none", "interval", "chapters", "chapters_fallback_interval"
+]
+
 
 class RunStatus(StrEnum):
     """Lifecycle state of an archive's most recent run."""
@@ -46,6 +53,7 @@ class ArchivedVideo(BaseModel):
     thumbnail_url: str | None = None
     archived_at: datetime
     clips: list[Clip] = Field(default_factory=list)
+    clip_strategy: ClipStrategy = "interval"
 
 
 class ArchiveConfig(BaseModel):

@@ -62,6 +62,12 @@ export interface UploadStats {
 
 export type ClipMode = "chapters" | "interval" | "none";
 export type RunStatus = "idle" | "running" | "completed" | "failed";
+/** What the clip planner actually did (may differ from the requested mode). */
+export type ClipStrategy =
+  | "none"
+  | "interval"
+  | "chapters"
+  | "chapters_fallback_interval";
 
 export interface Clip {
   key: string;
@@ -80,6 +86,7 @@ export interface ArchivedVideo {
   thumbnail_url: string | null;
   archived_at: string;
   clips: Clip[];
+  clip_strategy: ClipStrategy;
 }
 
 /** Create/edit payload for an archive. */

@@ -33,6 +33,10 @@ multi-GB files in memory.
 - If yt-dlp reports no duration (direct-media URLs), probe the file with ffmpeg
 - Upload the VOD via `client.upload_file` (managed multipart) and write metadata JSON
 - Update the manifest with progress and the new video entry
+- Progress is stage-weighted so the determinate bar advances instead of freezing:
+  0-10% probing, then each video owns an equal slice of the 10-90% band with the
+  bar stepping through download → upload → clipping (`_work_progress`), and 100%
+  on completion
 
 ## Edge Cases
 - URL yields no downloadable video → run fails with a clear error
@@ -40,7 +44,7 @@ multi-GB files in memory.
 - Download/network error → run marked `failed`, `last_error` set; temp dir cleaned up
 
 ## UX States (if applicable)
-- Progress + "downloading N/M" surfaced on the archive while running
+- Progress + a per-stage step label ("downloading N/M" → "uploading N/M" → "cutting clips N/M") surfaced on the archive while running; the determinate bar advances with each stage rather than sitting at a fixed value
 
 ## Verification
 - Test files: `services/api/tests/test_archives.py` (`test_run_pipeline_hermetic`, signature guard)

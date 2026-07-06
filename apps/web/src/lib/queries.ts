@@ -94,6 +94,13 @@ export function useArchives() {
   return useQuery<Archive[], ApiError>({
     queryKey: qk.archives(),
     queryFn: getArchives,
+    // Poll the whole list while any archive is running so the primary Run
+    // surface reflects live progress + completion without a manual reload;
+    // stop polling once nothing is running.
+    refetchInterval: (query) =>
+      (query.state.data ?? []).some((a) => a.status === "running")
+        ? 2000
+        : false,
   });
 }
 

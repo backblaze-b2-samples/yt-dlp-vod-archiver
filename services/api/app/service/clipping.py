@@ -7,7 +7,7 @@ chapter markers or evenly-spaced intervals.
 
 import logging
 
-from app.types import ClipMode
+from app.types import ClipMode, ClipStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -34,34 +34,45 @@ def _interval_plan(
     return plan
 
 
+def _chapter_plan(chapters: list[dict], max_clips: int, duration: float) -> ClipPlan:
+    """One clip per usable chapter marker, capped at ``max_clips``."""
+    plan: ClipPlan = []
+    for i, chapter in enumerate(chapters[:max_clips]):
+        start = float(chapter.get("start_time") or 0.0)
+        end = float(chapter.get("end_time") or 0.0)
+        if end <= start:
+            continue
+        label = chapter.get("title") or f"Chapter {i + 1}"
+        plan.append((round(start, 3), round(min(end, duration), 3), label))
+    return plan
+
+
 def build_clip_plan(
     duration: float,
     clip_mode: ClipMode,
     clip_length_seconds: int,
     max_clips: int,
     chapters: list[dict],
-) -> ClipPlan:
-    """Return the clip cut plan for a VOD.
+) -> tuple[ClipPlan, ClipStrategy]:
+    """Return the clip cut plan *and the strategy actually used* for a VOD.
 
     - ``none``: no clips.
-    - ``chapters``: one clip per chapter marker (up to ``max_clips``); falls
-      back to interval mode when the video has no usable chapter markers.
+    - ``chapters``: one clip per chapter marker (up to ``max_clips``); when the
+      source has no usable chapter markers this falls back to interval mode and
+      reports ``chapters_fallback_interval`` so the UI can say so.
     - ``interval``: evenly-spaced fixed-length clips.
     """
     if clip_mode == "none" or duration <= 0:
-        return []
+        return [], "none"
 
-    if clip_mode == "chapters" and chapters:
-        plan: ClipPlan = []
-        for i, chapter in enumerate(chapters[:max_clips]):
-            start = float(chapter.get("start_time") or 0.0)
-            end = float(chapter.get("end_time") or 0.0)
-            if end <= start:
-                continue
-            label = chapter.get("title") or f"Chapter {i + 1}"
-            plan.append((round(start, 3), round(min(end, duration), 3), label))
+    if clip_mode == "chapters":
+        plan = _chapter_plan(chapters, max_clips, duration)
         if plan:
-            return plan
+            return plan, "chapters"
         logger.info("chapters mode requested but no usable markers; using interval")
+        return (
+            _interval_plan(duration, clip_length_seconds, max_clips),
+            "chapters_fallback_interval",
+        )
 
-    return _interval_plan(duration, clip_length_seconds, max_clips)
+    return _interval_plan(duration, clip_length_seconds, max_clips), "interval"

@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Film, Pencil, Play, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Download,
+  Film,
+  Pencil,
+  Play,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +101,15 @@ function VideoRow({ video }: { video: ArchivedVideo }) {
         </div>
       </AccordionTrigger>
       <AccordionContent className="px-1">
+        {video.clip_strategy === "chapters_fallback_interval" && (
+          <p className="mb-3 flex items-start gap-1.5 text-xs text-muted-foreground">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              Chapters mode was requested, but this source has no chapter
+              markers — fell back to evenly-spaced interval clips.
+            </span>
+          </p>
+        )}
         <div className="mb-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
           <div>
             <div className="font-semibold text-foreground">Duration</div>

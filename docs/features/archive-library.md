@@ -13,7 +13,7 @@ browser to read it back with inline clip playback.
 - `repo/manifest.py` — read/modify/write `archive/index.json` under a lock
 - `service/archives.py` — `list_archives`, `get_archive`, `get_asset_url`
 - `apps/web/src/components/archives/archive-detail.tsx` — scoped explorer + `ClipCard`
-- `apps/web/src/lib/queries.ts` — `useArchives`, `useArchive` (polls while running), `useArchiveAsset`
+- `apps/web/src/lib/queries.ts` — `useArchives` (polls the list every 2s while any archive is running, then stops), `useArchive` (polls while running), `useArchiveAsset`
 
 ## Canonical Files
 - Manifest access: `services/api/app/repo/manifest.py`
@@ -28,7 +28,7 @@ browser to read it back with inline clip playback.
 
 ## Flow
 - The manifest is the single source of truth (no database)
-- List/detail read it via TanStack Query; the detail page polls while `status === "running"`
+- List/detail read it via TanStack Query; the list polls every 2s while any archive is `running` (so the primary Run surface reflects live progress and completion without a manual reload) and the detail page polls while its own `status === "running"`. Both stop polling once nothing is running.
 - Each clip/VOD/metadata asset is fetched through a presigned URL scoped to the `archive/` prefix
 - Clips render inline in `<video>`; VOD and metadata JSON have download links
 

@@ -15,12 +15,19 @@ from threading import Lock, Thread
 
 from app.repo import ffmpeg_client, manifest, upload_json, upload_path, ytdlp_client
 from app.service.clipping import build_clip_plan
-from app.types import Archive, ArchivedVideo, Clip, RunStatus
+from app.types import Archive, ArchivedVideo, Clip, ClipStrategy, RunStatus
 
 logger = logging.getLogger(__name__)
 
 # Cap videos processed per run so a channel/playlist source stays bounded.
 MAX_VIDEOS_PER_RUN = 3
+
+# Progress budget for the determinate bar: 0-10 probing, 10-90 per-video work
+# (download -> upload -> clipping), 90-100 finalize. Each video owns an equal
+# slice of the 10-90 band and each stage advances the bar within that slice so a
+# long download/clip phase never looks frozen at a single fixed value.
+_WORK_PROGRESS_START = 10
+_WORK_PROGRESS_END = 90
 
 _running: set[str] = set()
 _running_lock = Lock()
@@ -31,6 +38,18 @@ _UNSAFE_ID_RE = re.compile(r"[^A-Za-z0-9_-]")
 def _safe_id(value: str) -> str:
     cleaned = _UNSAFE_ID_RE.sub("_", (value or "video").strip())
     return cleaned[:100] or "video"
+
+
+def _work_progress(idx: int, total: int, stage_fraction: float) -> int:
+    """Monotonic progress for stage ``stage_fraction`` (0..1) of video ``idx``.
+
+    Positions each stage inside the video's slice of the 10-90 work band so the
+    determinate bar advances across download -> upload -> clipping instead of
+    sitting at a fixed 10% for the whole download+clip span.
+    """
+    band = _WORK_PROGRESS_END - _WORK_PROGRESS_START
+    slice_width = band / max(total, 1)
+    return int(_WORK_PROGRESS_START + slice_width * (idx + stage_fraction))
 
 
 def is_running(archive_id: str) -> bool:
@@ -77,8 +96,8 @@ def _run_safe(archive_id: str) -> None:
 
 def _make_clips(
     archive: Archive, workdir: str, src_path: str, vid: str, summary: dict
-) -> list[Clip]:
-    plan = build_clip_plan(
+) -> tuple[list[Clip], ClipStrategy]:
+    plan, strategy = build_clip_plan(
         summary["duration_seconds"],
         archive.clip_mode,
         archive.clip_length_seconds,
@@ -97,7 +116,7 @@ def _make_clips(
         clip_key = f"archive/clips/{archive.id}/{vid}/{clip_name}"
         upload_path(local_clip, clip_key, "video/mp4")
         clips.append(Clip(key=clip_key, start=start, end=end, label=label))
-    return clips
+    return clips, strategy
 
 
 def _run(archive_id: str) -> None:
@@ -116,11 +135,12 @@ def _run(archive_id: str) -> None:
 
     videos: list[ArchivedVideo] = []
     with tempfile.TemporaryDirectory(prefix="vod-archive-") as workdir:
+        total = len(urls)
         for idx, url in enumerate(urls):
-            label = f"{idx + 1}/{len(urls)}"
+            label = f"{idx + 1}/{total}"
             manifest.update_archive(
                 archive_id,
-                progress=10 + int(80 * idx / len(urls)),
+                progress=_work_progress(idx, total, 0.0),
                 current_step=f"downloading {label}",
             )
             local_path, vinfo = ytdlp_client.download(url, workdir)
@@ -131,15 +151,22 @@ def _run(archive_id: str) -> None:
                 summary["duration_seconds"] = ffmpeg_client.probe_duration(local_path)
             vid = _safe_id(summary["video_id"])
 
+            manifest.update_archive(
+                archive_id,
+                progress=_work_progress(idx, total, 0.5),
+                current_step=f"uploading {label}",
+            )
             vod_key = f"archive/vods/{archive_id}/{vid}.mp4"
             size = upload_path(local_path, vod_key, "video/mp4")
             meta_key = f"archive/meta/{archive_id}/{vid}.json"
             upload_json(meta_key, vinfo)
 
             manifest.update_archive(
-                archive_id, current_step=f"cutting clips {label}"
+                archive_id,
+                progress=_work_progress(idx, total, 0.75),
+                current_step=f"cutting clips {label}",
             )
-            clips = _make_clips(archive, workdir, local_path, vid, summary)
+            clips, clip_strategy = _make_clips(archive, workdir, local_path, vid, summary)
 
             videos.append(
                 ArchivedVideo(
@@ -152,6 +179,7 @@ def _run(archive_id: str) -> None:
                     thumbnail_url=summary["thumbnail_url"],
                     archived_at=datetime.now(UTC),
                     clips=clips,
+                    clip_strategy=clip_strategy,
                 )
             )
             # Persist incrementally so a mid-run reload shows partial results.

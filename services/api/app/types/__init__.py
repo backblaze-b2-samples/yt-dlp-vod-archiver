@@ -6,6 +6,7 @@ from app.types.archives import (
     ArchiveStats,
     Clip,
     ClipMode,
+    ClipStrategy,
     DailyArchiveCount,
     RunStatus,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "ArchivedVideo",
     "Clip",
     "ClipMode",
+    "ClipStrategy",
     "DailyArchiveCount",
     "DailyUploadCount",
     "ErrorResponse",
